@@ -1,0 +1,591 @@
+<title>Convertidor Print3rbot</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Space+Grotesk:wght@500;700&display=swap">
+<style>
+/* Layout: mesa de dibujo técnico — panel de controles a la izquierda, hoja milimetrada a la derecha, código debajo. */
+:root {
+  --bg: #eef1f4;
+  --panel: #ffffff;
+  --paper: #fbfcfd;
+  --grid: #d5dfe9;
+  --grid-strong: #a9bdd1;
+  --ink: #16243a;
+  --muted: #5b6b80;
+  --line: #d3dbe4;
+  --accent: #d9631e;
+  --accent-ink: #ffffff;
+  --travel: #d9631e;
+  --code-bg: #f4f6f9;
+  --font-display: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #11161d; --panel: #18202a; --paper: #1b2430; --grid: #263240; --grid-strong: #39495c;
+    --ink: #e4ebf3; --muted: #93a3b6; --line: #2b3746; --accent: #f0823f; --accent-ink: #1a0d04;
+    --travel: #f0823f; --code-bg: #121921; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #11161d; --panel: #18202a; --paper: #1b2430; --grid: #263240; --grid-strong: #39495c;
+  --ink: #e4ebf3; --muted: #93a3b6; --line: #2b3746; --accent: #f0823f; --accent-ink: #1a0d04;
+  --travel: #f0823f; --code-bg: #121921; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 24px 48px;
+}
+.wrap { max-width: 1180px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 24px; }
+h1 { font-family: var(--font-display); font-weight: 700; font-size: 1.75rem; margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
+h1 span { color: var(--accent); }
+header p { margin: 0; color: var(--muted); max-width: 62ch; }
+.main { display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 860px) { .main { grid-template-columns: minmax(0, 1fr); } }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 16px; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+h2 { font-family: var(--font-display); font-weight: 500; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 0; }
+fieldset { border: 0; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; }
+.drop {
+  border: 1.5px dashed var(--grid-strong); border-radius: 6px; padding: 14px; text-align: center; color: var(--muted);
+  cursor: pointer; transition: border-color .15s, background .15s; font-size: 0.9rem;
+}
+.drop:hover, .drop.over, .drop:focus-within { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 6%, transparent); }
+.drop strong { color: var(--ink); font-weight: 600; }
+.drop input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.row { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; align-items: center; }
+.row label { font-size: 0.9rem; }
+.row output, .row .val { font-family: var(--font-mono); font-size: 0.82rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.row input[type=range] { grid-column: 1 / -1; width: 100%; accent-color: var(--accent); }
+.num { display: flex; gap: 8px; }
+.num label { flex: 1; display: flex; flex-direction: column; gap: 2px; font-size: 0.82rem; color: var(--muted); }
+.num input { font: inherit; font-family: var(--font-mono); font-size: 0.9rem; padding: 6px 8px; border: 1px solid var(--line); border-radius: 5px; background: var(--paper); color: var(--ink); width: 100%; }
+.seg { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.seg input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.seg label { text-align: center; padding: 7px 4px; font-size: 0.84rem; cursor: pointer; border-right: 1px solid var(--line); }
+.seg label:last-of-type { border-right: 0; }
+.seg input:checked + label { background: var(--ink); color: var(--panel); }
+.seg input:focus-visible + label { outline: 2px solid var(--accent); outline-offset: -2px; }
+.checks { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 0.9rem; }
+.checks label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+.checks input { accent-color: var(--accent); }
+.sheet { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.canvas-box { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px; min-width: 0; }
+canvas#view { display: block; width: 100%; height: auto; max-width: 100%; border-radius: 4px; }
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; }
+.stats { display: flex; flex-wrap: wrap; gap: 4px 20px; font-size: 0.88rem; color: var(--muted); }
+.stats b { font-family: var(--font-mono); font-weight: 500; color: var(--ink); font-variant-numeric: tabular-nums; }
+.stats .warn b, .warn { color: var(--accent); }
+button {
+  font: inherit; font-size: 0.9rem; font-weight: 500; padding: 7px 14px; border-radius: 6px; cursor: pointer;
+  border: 1px solid var(--line); background: var(--panel); color: var(--ink);
+}
+button:hover { border-color: var(--grid-strong); }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+button:focus-visible, .num input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.btns { display: flex; gap: 8px; flex-wrap: wrap; }
+.code { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 16px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.code-head { display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between; align-items: center; }
+.code-head p { margin: 0; color: var(--muted); font-size: 0.88rem; max-width: 70ch; }
+.code-head code { font-family: var(--font-mono); font-size: 0.85em; color: var(--ink); }
+textarea#out {
+  width: 100%; height: 220px; resize: vertical; font-family: var(--font-mono); font-size: 0.78rem; line-height: 1.45;
+  background: var(--code-bg); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 10px; white-space: pre; overflow: auto;
+}
+.toast { font-size: 0.85rem; color: var(--accent); min-height: 1.2em; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Convertidor <span>Print3rbot</span></h1>
+    <p>Sube una imagen sencilla (logo, silueta, dibujo en blanco y negro). La app la convierte en trazos en milímetros y genera <code>dibujo.py</code> para el programa de Pybricks.</p>
+  </header>
+
+  <div class="main">
+    <aside class="panel">
+      <fieldset>
+        <h2>Imagen</h2>
+        <label class="drop" id="drop">
+          <input type="file" id="file" accept="image/*">
+          <strong>Elegir imagen</strong> o arrastrarla aquí<br>
+          <span id="fname">Ejemplo cargado: carita</span>
+        </label>
+      </fieldset>
+
+      <fieldset>
+        <h2>Tamaño en el papel</h2>
+        <div class="num">
+          <label for="wmm">Ancho (mm)<input type="number" id="wmm" value="80" min="10" max="300" step="1"></label>
+          <label for="hmm">Alto (mm)<input type="number" id="hmm" value="80" min="10" max="300" step="1" readonly></label>
+        </div>
+        <div class="row">
+          <label for="res">Resolución</label><output id="resv"></output>
+          <input type="range" id="res" min="1" max="6" step="0.5" value="3">
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <h2>Blanco y negro</h2>
+        <div class="row">
+          <label for="thr">Umbral</label><output id="thrv"></output>
+          <input type="range" id="thr" min="10" max="245" step="1" value="128">
+        </div>
+        <div class="checks">
+          <label><input type="checkbox" id="inv"> Invertir</label>
+          <label><input type="checkbox" id="showimg" checked> Ver imagen</label>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <h2>Trazos</h2>
+        <div class="seg" role="radiogroup" aria-label="Modo de trazo">
+          <input type="radio" name="mode" id="m-c" value="contour" checked><label for="m-c">Contorno</label>
+          <input type="radio" name="mode" id="m-f" value="fill"><label for="m-f">Relleno</label>
+          <input type="radio" name="mode" id="m-b" value="both"><label for="m-b">Ambos</label>
+        </div>
+        <div class="row" id="hatchrow">
+          <label for="hatch">Separación del rayado</label><output id="hatchv"></output>
+          <input type="range" id="hatch" min="0.5" max="5" step="0.1" value="1.2">
+        </div>
+        <div class="checks" id="crossrow">
+          <label><input type="checkbox" id="cross"> Rayado cruzado</label>
+        </div>
+        <div class="row">
+          <label for="simp">Simplificar</label><output id="simpv"></output>
+          <input type="range" id="simp" min="0" max="1.5" step="0.05" value="0.25">
+        </div>
+        <div class="row">
+          <label for="minlen">Ignorar trazos menores a</label><output id="minlenv"></output>
+          <input type="range" id="minlen" min="0" max="10" step="0.5" value="1.5">
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <h2>Orientación</h2>
+        <div class="checks">
+          <label><input type="checkbox" id="flipx"> Espejo X</label>
+          <label><input type="checkbox" id="flipy"> Espejo Y</label>
+          <label><input type="checkbox" id="showtravel" checked> Ver viajes</label>
+        </div>
+      </fieldset>
+    </aside>
+
+    <section class="sheet">
+      <div class="canvas-box">
+        <canvas id="view" width="800" height="800" aria-label="Vista previa del dibujo sobre papel milimetrado"></canvas>
+      </div>
+      <div class="toolbar">
+        <div class="stats" id="stats"></div>
+        <div class="btns">
+          <button id="sim" type="button">Simular dibujo</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <section class="code">
+    <div class="code-head">
+      <p>Guarda esto como <code>dibujo.py</code> junto a <code>print3rbot.py</code> en tu proyecto de Pybricks. El origen (0, 0) es el home del robot; la cuadrícula marca 10 mm.</p>
+      <div class="btns"><button class="primary" id="copy" type="button">Copiar dibujo.py</button></div>
+    </div>
+    <div class="toast" id="toast" role="status"></div>
+    <textarea id="out" spellcheck="false" readonly aria-label="Código dibujo.py"></textarea>
+  </section>
+</div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const view = $('view'), vctx = view.getContext('2d');
+  let srcImg = null;          // HTMLImageElement / canvas
+  let result = null;          // { strokes, wmm, hmm, bin, bw, bh, res }
+  let simTimer = null;
+
+  // ---------- ejemplo inicial: carita ----------
+  function sampleImage() {
+    const c = document.createElement('canvas'); c.width = c.height = 400;
+    const g = c.getContext('2d');
+    g.fillStyle = '#fff'; g.fillRect(0, 0, 400, 400);
+    g.fillStyle = '#000'; g.strokeStyle = '#000';
+    g.lineWidth = 26; g.beginPath(); g.arc(200, 200, 170, 0, Math.PI * 2); g.stroke();
+    g.beginPath(); g.ellipse(140, 160, 28, 40, 0, 0, Math.PI * 2); g.fill();
+    g.beginPath(); g.ellipse(260, 160, 28, 40, 0, 0, Math.PI * 2); g.fill();
+    g.lineWidth = 22; g.lineCap = 'round'; g.beginPath(); g.arc(200, 215, 95, 0.15 * Math.PI, 0.85 * Math.PI); g.stroke();
+    return c;
+  }
+
+  // ---------- imagen -> binario ----------
+  function binarize(img, wmm, res, thr, inv) {
+    const iw = img.naturalWidth || img.width, ih = img.naturalHeight || img.height;
+    const hmm = wmm * ih / iw;
+    const bw = Math.max(4, Math.round(wmm * res)), bh = Math.max(4, Math.round(hmm * res));
+    const c = document.createElement('canvas'); c.width = bw; c.height = bh;
+    const g = c.getContext('2d', { willReadFrequently: true });
+    g.fillStyle = '#fff'; g.fillRect(0, 0, bw, bh);
+    g.imageSmoothingQuality = 'high';
+    g.drawImage(img, 0, 0, bw, bh);
+    const d = g.getImageData(0, 0, bw, bh).data;
+    const bin = new Uint8Array(bw * bh);
+    for (let i = 0; i < bw * bh; i++) {
+      const a = d[i * 4 + 3] / 255;
+      const lum = (0.299 * d[i * 4] + 0.587 * d[i * 4 + 1] + 0.114 * d[i * 4 + 2]) * a + 255 * (1 - a);
+      let ink = lum < thr;
+      if (inv) ink = !ink;
+      bin[i] = ink ? 1 : 0;
+    }
+    return { bin, bw, bh, hmm };
+  }
+
+  // ---------- contornos (marching squares) ----------
+  function contours(bin, bw, bh) {
+    const v = (x, y) => (x < 0 || y < 0 || x >= bw || y >= bh) ? 0 : bin[y * bw + x];
+    const K = 2 * bh + 8;
+    const key = (x2, y2) => (x2 + 2) * K + (y2 + 2);
+    const adj = new Map();
+    const link = (a, b) => {
+      if (!adj.has(a)) adj.set(a, []); if (!adj.has(b)) adj.set(b, []);
+      adj.get(a).push(b); adj.get(b).push(a);
+    };
+    // edge midpoints in doubled coords; pixel centers at even coords
+    for (let y = -1; y < bh; y++) for (let x = -1; x < bw; x++) {
+      const tl = v(x, y), tr = v(x + 1, y), br = v(x + 1, y + 1), bl = v(x, y + 1);
+      const c = tl * 8 + tr * 4 + br * 2 + bl;
+      if (c === 0 || c === 15) continue;
+      const T = key(2 * x + 1, 2 * y), R = key(2 * x + 2, 2 * y + 1), B = key(2 * x + 1, 2 * y + 2), L = key(2 * x, 2 * y + 1);
+      switch (c) {
+        case 1: case 14: link(L, B); break;
+        case 2: case 13: link(B, R); break;
+        case 3: case 12: link(L, R); break;
+        case 4: case 11: link(T, R); break;
+        case 6: case 9: link(T, B); break;
+        case 7: case 8: link(L, T); break;
+        case 5: link(L, T); link(B, R); break;
+        case 10: link(T, R); link(L, B); break;
+      }
+    }
+    const unkey = k => [Math.floor(k / K) - 2, (k % K) - 2];
+    const out = [];
+    for (const [start, list] of adj) {
+      while (list.length) {
+        const pts = [unkey(start)];
+        let cur = start;
+        while (true) {
+          const nl = adj.get(cur);
+          if (!nl.length) break;
+          const nb = nl.pop();
+          const back = adj.get(nb); back.splice(back.indexOf(cur), 1);
+          pts.push(unkey(nb));
+          cur = nb;
+          if (cur === start) break;
+        }
+        // doubled coords -> pixel coords (pixel center = integer)
+        out.push(pts.map(([x2, y2]) => [x2 / 2, y2 / 2]));
+      }
+    }
+    return out;
+  }
+
+  // ---------- relleno (rayado) ----------
+  function hatch(bin, bw, bh, stepPx, vertical) {
+    const out = [];
+    const n1 = vertical ? bw : bh, n2 = vertical ? bh : bw;
+    const at = (i, j) => vertical ? bin[j * bw + i] : bin[i * bw + j];
+    let flip = false;
+    for (let f = stepPx / 2; f < n1; f += stepPx) {
+      const i = Math.min(n1 - 1, Math.round(f));
+      const row = [];
+      let s = -1;
+      for (let j = 0; j <= n2; j++) {
+        const on = j < n2 && at(i, j);
+        if (on && s < 0) s = j;
+        if (!on && s >= 0) { row.push([s - 0.3, j - 0.7]); s = -1; }
+      }
+      if (flip) row.reverse();
+      for (const [a, b] of row) {
+        let p = vertical ? [[i, a], [i, b]] : [[a, i], [b, i]];
+        if (flip) p.reverse();
+        out.push(p);
+      }
+      flip = !flip;
+    }
+    return out;
+  }
+
+  // ---------- simplificación (Ramer-Douglas-Peucker) ----------
+  function rdp(pts, eps) {
+    if (pts.length < 3 || eps <= 0) return pts;
+    const keep = new Uint8Array(pts.length); keep[0] = keep[pts.length - 1] = 1;
+    const stack = [[0, pts.length - 1]];
+    while (stack.length) {
+      const [a, b] = stack.pop();
+      const [ax, ay] = pts[a], [bx, by] = pts[b];
+      const dx = bx - ax, dy = by - ay, L = Math.hypot(dx, dy);
+      let md = -1, mi = -1;
+      for (let i = a + 1; i < b; i++) {
+        const [px, py] = pts[i];
+        const d = L < 1e-9 ? Math.hypot(px - ax, py - ay) : Math.abs(dy * px - dx * py + bx * ay - by * ax) / L;
+        if (d > md) { md = d; mi = i; }
+      }
+      if (md > eps) { keep[mi] = 1; stack.push([a, mi], [mi, b]); }
+    }
+    return pts.filter((_, i) => keep[i]);
+  }
+  function simplifyClosed(pts, eps) {
+    // closed loop: split at the point farthest from the start so RDP keeps the shape
+    if (pts.length < 4) return pts;
+    let far = 0, fd = -1;
+    for (let i = 0; i < pts.length; i++) { const d = Math.hypot(pts[i][0] - pts[0][0], pts[i][1] - pts[0][1]); if (d > fd) { fd = d; far = i; } }
+    const a = rdp(pts.slice(0, far + 1), eps), b = rdp(pts.slice(far), eps);
+    return a.concat(b.slice(1));
+  }
+
+  const plen = s => { let L = 0; for (let i = 1; i < s.length; i++) L += Math.hypot(s[i][0] - s[i - 1][0], s[i][1] - s[i - 1][1]); return L; };
+
+  // ---------- orden (vecino más cercano) ----------
+  function order(strokes) {
+    const left = strokes.slice(), out = [];
+    let cx = 0, cy = 0;
+    while (left.length) {
+      let bi = 0, bd = Infinity, brev = false;
+      for (let i = 0; i < left.length; i++) {
+        const s = left[i], a = s[0], b = s[s.length - 1];
+        const da = (a[0] - cx) ** 2 + (a[1] - cy) ** 2;
+        if (da < bd) { bd = da; bi = i; brev = false; }
+        const db = (b[0] - cx) ** 2 + (b[1] - cy) ** 2;
+        if (db < bd) { bd = db; bi = i; brev = true; }
+      }
+      let s = left.splice(bi, 1)[0];
+      if (brev) s = s.slice().reverse();
+      out.push(s);
+      const e = s[s.length - 1]; cx = e[0]; cy = e[1];
+    }
+    return out;
+  }
+
+  // ---------- pipeline ----------
+  function compute() {
+    if (!srcImg) return;
+    const wmm = Math.max(10, +$('wmm').value || 80);
+    const res = +$('res').value;
+    const { bin, bw, bh, hmm } = binarize(srcImg, wmm, res, +$('thr').value, $('inv').checked);
+    $('hmm').value = hmm.toFixed(1);
+    const mode = document.querySelector('input[name=mode]:checked').value;
+    const eps = +$('simp').value, minlen = +$('minlen').value;
+    let strokes = [];
+    const toMM = ([x, y]) => {
+      let X = (x + 0.5) / res, Y = (y + 0.5) / res;
+      if ($('flipx').checked) X = wmm - X;
+      if ($('flipy').checked) Y = hmm - Y;
+      return [Math.max(0, Math.min(wmm, X)), Math.max(0, Math.min(hmm, Y))];
+    };
+    if (mode !== 'fill') {
+      for (const c of contours(bin, bw, bh)) {
+        const mm = c.map(toMM);
+        const s = simplifyClosed(mm, eps);
+        if (plen(s) >= minlen && s.length >= 2) strokes.push(s);
+      }
+    }
+    if (mode !== 'contour') {
+      const step = +$('hatch').value * res;
+      let h = hatch(bin, bw, bh, step, false);
+      if ($('cross').checked) h = h.concat(hatch(bin, bw, bh, step, true));
+      for (const s of h) { const mm = s.map(toMM); if (plen(mm) >= Math.min(minlen, 0.5)) strokes.push(mm); }
+    }
+    strokes = order(strokes);
+    result = { strokes, wmm, hmm, bin, bw, bh, res };
+    stopSim();
+    render(Infinity);
+    writeOut();
+  }
+
+  // ---------- vista previa ----------
+  function render(limit) {
+    if (!result) return;
+    const { strokes, wmm, hmm, bin, bw, bh } = result;
+    const css = getComputedStyle(document.documentElement);
+    const col = n => css.getPropertyValue(n).trim();
+    const boxW = view.parentElement.clientWidth - 24;
+    const dpr = window.devicePixelRatio || 1;
+    const pad = 28;
+    const scale = Math.min((boxW - pad * 2) / wmm, 640 / hmm);
+    const W = Math.round(wmm * scale + pad * 2), H = Math.round(hmm * scale + pad * 2);
+    view.width = W * dpr; view.height = H * dpr; view.style.width = W + 'px'; view.style.height = H + 'px';
+    const g = vctx; g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.fillStyle = col('--paper'); g.fillRect(0, 0, W, H);
+    const X = x => pad + x * scale, Y = y => pad + y * scale;
+    // cuadrícula milimetrada
+    for (let m = 0; m <= Math.ceil(Math.max(wmm, hmm)); m++) {
+      const major = m % 10 === 0;
+      if (!major && scale < 4) continue;
+      g.strokeStyle = major ? col('--grid-strong') : col('--grid'); g.lineWidth = major ? 1 : 0.5;
+      if (m <= wmm) { g.beginPath(); g.moveTo(X(m), Y(0)); g.lineTo(X(m), Y(hmm)); g.stroke(); }
+      if (m <= hmm) { g.beginPath(); g.moveTo(X(0), Y(m)); g.lineTo(X(wmm), Y(m)); g.stroke(); }
+    }
+    g.fillStyle = col('--muted'); g.font = '11px "IBM Plex Mono", monospace'; g.textAlign = 'center'; g.textBaseline = 'bottom';
+    for (let m = 0; m <= wmm; m += 10) g.fillText(m, X(m), pad - 6);
+    g.textAlign = 'right'; g.textBaseline = 'middle';
+    for (let m = 0; m <= hmm; m += 10) g.fillText(m, pad - 6, Y(m));
+    // imagen binaria tenue
+    if ($('showimg').checked) {
+      const c = document.createElement('canvas'); c.width = bw; c.height = bh;
+      const cg = c.getContext('2d'); const id = cg.createImageData(bw, bh);
+      const ink = col('--ink');
+      const rgb = hexToRgb(ink);
+      for (let i = 0; i < bw * bh; i++) {
+        let sx = i % bw, sy = (i / bw) | 0;
+        if ($('flipx').checked) sx = bw - 1 - sx;
+        if ($('flipy').checked) sy = bh - 1 - sy;
+        const o = (sy * bw + sx) * 4;
+        id.data[o] = rgb[0]; id.data[o + 1] = rgb[1]; id.data[o + 2] = rgb[2]; id.data[o + 3] = bin[i] ? 28 : 0;
+      }
+      cg.putImageData(id, 0, 0);
+      g.imageSmoothingEnabled = false;
+      g.drawImage(c, X(0), Y(0), wmm * scale, hmm * scale);
+    }
+    // origen
+    g.fillStyle = col('--accent'); g.beginPath(); g.arc(X(0), Y(0), 4, 0, Math.PI * 2); g.fill();
+    // viajes + trazos
+    const n = Math.min(limit, strokes.length);
+    let cx = 0, cy = 0;
+    if ($('showtravel').checked) {
+      g.strokeStyle = col('--travel'); g.globalAlpha = 0.55; g.lineWidth = 0.8; g.setLineDash([3, 3]);
+      g.beginPath();
+      for (let i = 0; i < n; i++) { const s = strokes[i]; g.moveTo(X(cx), Y(cy)); g.lineTo(X(s[0][0]), Y(s[0][1])); const e = s[s.length - 1]; cx = e[0]; cy = e[1]; }
+      g.stroke(); g.setLineDash([]); g.globalAlpha = 1;
+    }
+    g.strokeStyle = col('--ink'); g.lineWidth = Math.max(1, 0.35 * scale); g.lineJoin = 'round'; g.lineCap = 'round';
+    g.beginPath();
+    for (let i = 0; i < n; i++) {
+      const s = strokes[i]; g.moveTo(X(s[0][0]), Y(s[0][1]));
+      for (let j = 1; j < s.length; j++) g.lineTo(X(s[j][0]), Y(s[j][1]));
+    }
+    g.stroke();
+    if (n < strokes.length && n > 0) {
+      const e = strokes[n - 1][strokes[n - 1].length - 1];
+      g.fillStyle = col('--accent'); g.beginPath(); g.arc(X(e[0]), Y(e[1]), 5, 0, Math.PI * 2); g.fill();
+    }
+  }
+  function hexToRgb(h) {
+    h = h.replace('#', ''); if (h.length === 3) h = h.split('').map(c => c + c).join('');
+    const n = parseInt(h, 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  }
+
+  // ---------- salida ----------
+  const fmt = v => { const r = Math.round(v * 10) / 10; return Number.isInteger(r) ? String(r) : r.toFixed(1); };
+  function writeOut() {
+    const { strokes, wmm, hmm } = result;
+    let pts = 0, draw = 0, travel = 0, cx = 0, cy = 0;
+    const lines = strokes.map(s => {
+      pts += s.length; draw += plen(s);
+      travel += Math.hypot(s[0][0] - cx, s[0][1] - cy);
+      const e = s[s.length - 1]; cx = e[0]; cy = e[1];
+      // quitar puntos repetidos tras redondear
+      const out = []; let last = '';
+      for (const p of s) { const t = '(' + fmt(p[0]) + ',' + fmt(p[1]) + ')'; if (t !== last) out.push(t); last = t; }
+      if (out.length === 1) out.push(out[0]);
+      return '    [' + out.join(',') + '],';
+    });
+    // estimación con los valores por defecto de print3rbot.py: 12 °/mm, 250 °/s dibujando, 600 °/s viajando
+    const secs = draw / (250 / 12) + travel / (600 / 12) + strokes.length * 0.9;
+    const t = secs < 60 ? Math.round(secs) + ' s' : Math.floor(secs / 60) + ' min ' + Math.round(secs % 60) + ' s';
+    const heavy = pts > 20000;
+    $('stats').innerHTML =
+      `<span>Trazos <b>${strokes.length}</b></span>` +
+      `<span class="${heavy ? 'warn' : ''}">Puntos <b>${pts}</b></span>` +
+      `<span>Tinta <b>${(draw / 1000).toFixed(2)} m</b></span>` +
+      `<span>Tiempo aprox. <b>${t}</b></span>` +
+      (heavy ? '<span class="warn">Muchos puntos: sube “Simplificar” o baja la resolución</span>' : '');
+    $('out').value =
+`# dibujo.py - generado por el Convertidor Print3rbot
+# ${strokes.length} trazos, ${pts} puntos, ~${t}
+# Unidades: mm. (0, 0) = home del robot.
+
+WIDTH = ${fmt(wmm)}
+HEIGHT = ${fmt(hmm)}
+
+STROKES = [
+${lines.join('\n')}
+]
+`;
+  }
+
+  // ---------- simulación ----------
+  function stopSim() { if (simTimer) { cancelAnimationFrame(simTimer); simTimer = null; } $('sim').textContent = 'Simular dibujo'; }
+  $('sim').addEventListener('click', () => {
+    if (!result) return;
+    if (simTimer) { stopSim(); render(Infinity); return; }
+    const total = result.strokes.length;
+    const perFrame = Math.max(1, Math.ceil(total / 240));
+    let i = 0;
+    $('sim').textContent = 'Detener';
+    const step = () => {
+      i += perFrame; render(i);
+      if (i < total) simTimer = requestAnimationFrame(step); else stopSim();
+    };
+    step();
+  });
+
+  // ---------- controles ----------
+  const labels = {
+    res: v => (1 / v).toFixed(2) + ' mm/px',
+    thr: v => v,
+    hatch: v => (+v).toFixed(1) + ' mm',
+    simp: v => (+v).toFixed(2) + ' mm',
+    minlen: v => (+v).toFixed(1) + ' mm',
+  };
+  let pending = 0;
+  const schedule = () => { cancelAnimationFrame(pending); pending = requestAnimationFrame(compute); };
+  for (const id of Object.keys(labels)) {
+    const el = $(id), o = $(id + 'v');
+    const upd = () => { o.textContent = labels[id](el.value); };
+    upd(); el.addEventListener('input', () => { upd(); schedule(); });
+  }
+  const syncMode = () => {
+    const m = document.querySelector('input[name=mode]:checked').value;
+    $('hatchrow').hidden = $('crossrow').hidden = (m === 'contour');
+  };
+  document.querySelectorAll('input[name=mode]').forEach(r => r.addEventListener('change', () => { syncMode(); schedule(); }));
+  ['wmm', 'inv', 'cross', 'flipx', 'flipy'].forEach(id => $(id).addEventListener('input', schedule));
+  ['showimg', 'showtravel'].forEach(id => $(id).addEventListener('input', () => render(Infinity)));
+  syncMode();
+
+  function loadFile(f) {
+    if (!f || !f.type.startsWith('image/')) { toast('Ese archivo no es una imagen. Usa PNG, JPG o SVG.'); return; }
+    const url = URL.createObjectURL(f);
+    const img = new Image();
+    img.onload = () => { srcImg = img; $('fname').textContent = f.name; compute(); };
+    img.onerror = () => toast('No se pudo abrir la imagen. Prueba con otro archivo.');
+    img.src = url;
+  }
+  $('file').addEventListener('change', e => loadFile(e.target.files[0]));
+  const drop = $('drop');
+  ['dragenter', 'dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); }));
+  ['dragleave', 'drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('over'); }));
+  drop.addEventListener('drop', e => loadFile(e.dataTransfer.files[0]));
+  document.addEventListener('paste', e => {
+    const it = [...(e.clipboardData?.items || [])].find(i => i.type.startsWith('image/'));
+    if (it) loadFile(it.getAsFile());
+  });
+
+  let toastT = 0;
+  function toast(msg) { $('toast').textContent = msg; clearTimeout(toastT); toastT = setTimeout(() => $('toast').textContent = '', 3000); }
+  $('copy').addEventListener('click', () => {
+    const ta = $('out');
+    const fallback = () => { ta.focus(); ta.select(); toast('Texto seleccionado: usa Ctrl+C para copiar.'); };
+    try {
+      navigator.clipboard.writeText(ta.value).then(() => toast('dibujo.py copiado.'), fallback);
+    } catch (e) { fallback(); }
+  });
+
+  window.addEventListener('resize', () => render(Infinity));
+  matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', () => render(Infinity));
+  new MutationObserver(() => render(Infinity)).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+  srcImg = sampleImage();
+  compute();
+})();
+</script>
