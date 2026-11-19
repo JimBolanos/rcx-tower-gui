@@ -8,6 +8,7 @@ de toque extra) y una página para convertir una imagen sencilla en trazos.
 | `print3rbot.py` | Programa principal del robot (Pybricks, EV3). |
 | `dibujo.py` | El dibujo: lista de trazos en mm. Trae un ejemplo (marco + estrella + círculo). |
 | `convertidor.html` | Abre en el navegador: imagen → `dibujo.py`. |
+| `convertidor-rs/` | La misma app, nativa para Windows, macOS y Linux (Rust). |
 
 ## 1. Instalar Pybricks en el EV3
 

@@ -1,0 +1,43 @@
+name: Convertidor Print3rbot
+
+on:
+  push:
+    paths:
+      - "ev3-print3rbot/convertidor-rs/**"
+      - ".github/workflows/print3rbot-convertidor.yml"
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: ev3-print3rbot/convertidor-rs
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            name: windows-x64
+            bin: print3rbot-convertidor.exe
+          - os: macos-latest
+            name: macos-arm64
+            bin: print3rbot-convertidor
+          - os: macos-13
+            name: macos-x64
+            bin: print3rbot-convertidor
+          - os: ubuntu-latest
+            name: linux-x64
+            bin: print3rbot-convertidor
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Tests
+        run: cargo test --lib
+      - name: Build
+        run: cargo build --release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: print3rbot-convertidor-${{ matrix.name }}
+          path: ev3-print3rbot/convertidor-rs/target/release/${{ matrix.bin }}
