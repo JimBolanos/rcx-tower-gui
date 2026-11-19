@@ -262,7 +262,10 @@ def main():
     secs = draw(strokes)
     move_to(0, 0, SPEED_TRAVEL)
     say("Listo!", "%d s" % secs)
-    ev3.speaker.beep(880, 200)
+    try:
+        ev3.speaker.beep(880, 200)
+    except Exception:
+        pass
     wait(3000)
 
 

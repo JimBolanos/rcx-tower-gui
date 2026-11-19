@@ -10,15 +10,17 @@ de toque extra) y una página para convertir una imagen sencilla en trazos.
 | `convertidor.html` | Abre en el navegador: imagen → `dibujo.py`. |
 | `convertidor-rs/` | La misma app, nativa para Windows, macOS y Linux (Rust). |
 
-## 1. Instalar Pybricks en el EV3
+## 1. Cargar el programa (code.pybricks.com)
 
-Dos opciones, el código sirve para ambas:
+1. Abre code.pybricks.com en Chrome o Edge y conecta el EV3.
+2. Crea un archivo llamado exactamente `dibujo.py` y pega el dibujo.
+3. Crea `print3rbot.py` y pega el programa.
+4. Con `print3rbot.py` abierto, aprieta **Run**. `dibujo.py` se envía solo porque el
+   programa lo importa.
+5. En el EV3, aprieta el botón central para empezar.
 
-- **Pybricks v2.0 (estable):** graba la imagen *EV3 MicroPython* en una microSD, usa VS Code
-  con la extensión *LEGO MINDSTORMS EV3 MicroPython*, crea un proyecto y pon
-  `print3rbot.py` y `dibujo.py` en la misma carpeta.
-- **Firmware Pybricks nuevo para EV3:** en code.pybricks.com, sube los dos archivos y
-  ejecuta `print3rbot.py`.
+Con Pybricks v2.0 (microSD + VS Code) también funciona: pega el programa en `main.py` y pon
+`dibujo.py` en la misma carpeta.
 
 ## 2. Conexiones (por defecto)
 
