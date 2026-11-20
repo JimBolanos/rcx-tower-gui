@@ -1,5 +1,5 @@
 # Dibujo de ejemplo (marco + estrella + circulo), 60x60 mm.
-# Reemplaza este archivo con el que genera convertidor.html
+# El robot lo escala al AREA de dibujo. Reemplaza este archivo con el que genera convertidor.html
 
 WIDTH = 60
 HEIGHT = 60

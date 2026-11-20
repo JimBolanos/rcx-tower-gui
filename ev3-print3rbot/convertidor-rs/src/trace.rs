@@ -360,8 +360,8 @@ pub fn stats(strokes: &[Stroke]) -> Stats {
         cx = e[0];
         cy = e[1];
     }
-    // Valores por defecto de print3rbot.py: 12 °/mm, 250 °/s dibujando, 600 °/s viajando.
-    let seconds = ink / (250.0 / 12.0) + travel / (600.0 / 12.0) + strokes.len() as f32 * 0.9;
+    // Valores por defecto de print3rbot.py: 12 mm/s dibujando, 25 mm/s viajando.
+    let seconds = ink / 12.0 + travel / 25.0 + strokes.len() as f32 * 0.6;
     Stats { strokes: strokes.len(), points, ink_mm: ink, seconds }
 }
 
@@ -388,7 +388,7 @@ pub fn to_python(o: &Output) -> String {
     let mut s = String::new();
     s.push_str("# dibujo.py - generado por el Convertidor Print3rbot\n");
     s.push_str(&format!(
-        "# {} trazos, {} puntos, ~{}\n# Unidades: mm. (0, 0) = home del robot.\n\n",
+        "# {} trazos, {} puntos, ~{}\n# Unidades: mm. (0, 0) = esquina superior izquierda de la imagen.\n\n",
         st.strokes,
         st.points,
         fmt_time(st.seconds)

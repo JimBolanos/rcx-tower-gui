@@ -346,7 +346,7 @@ impl eframe::App for App {
                 }
                 ui.label(egui::RichText::new(&self.status).color(ACCENT));
             });
-            ui.label(egui::RichText::new("Pon dibujo.py junto a print3rbot.py en tu proyecto de Pybricks. (0, 0) = home del robot; la cuadrícula marca 10 mm.").weak().small());
+            ui.label(egui::RichText::new("Pon dibujo.py junto a print3rbot.py en tu proyecto de Pybricks. El robot escala y centra el dibujo en su área; la cuadrícula marca 10 mm.").weak().small());
             ui.add_space(4.0);
             egui::ScrollArea::both().auto_shrink([false, false]).show(ui, |ui| {
                 ui.add(egui::Label::new(egui::RichText::new(&self.code_preview).monospace()).extend().selectable(true));

@@ -1,61 +1,91 @@
 # EV3 Print3rbot con Pybricks
 
-Programa de Pybricks para el plotter **Print3rbot** (modelo de EV3, set 31313 + un sensor
-de toque extra) y una página para convertir una imagen sencilla en trazos.
+Programa de Pybricks para el **Print3rbot** de Christophe Avenel (2015): un brazo de dibujo
+con dos brazos articulados unidos en el lápiz (five-bar / SCARA paralelo), hecho con el
+EV3 Home (31313) más un segundo sensor de toque. Incluye un convertidor de imagen → trazos.
 
 | Archivo | Qué es |
 |---|---|
-| `print3rbot.py` | Programa principal del robot (Pybricks, EV3). |
+| `print3rbot.py` | Programa del robot (Pybricks, EV3). |
 | `dibujo.py` | El dibujo: lista de trazos en mm. Trae un ejemplo (marco + estrella + círculo). |
-| `convertidor.html` | Abre en el navegador: imagen → `dibujo.py`. |
-| `convertidor-rs/` | La misma app, nativa para Windows, macOS y Linux (Rust). |
+| `convertidor.html` | Convertidor en el navegador: imagen → `dibujo.py`. |
+| `convertidor-rs/` | El mismo convertidor, nativo para Windows, macOS y Linux (Rust). |
+
+## Cómo funciona el robot
+
+- Cada motor grande mueve un **tornillo sinfín** que gira un **engranaje de 40 dientes**: el
+  "hombro" de cada brazo. 40 vueltas del motor = 1 vuelta del brazo.
+- Cada brazo tiene dos tramos: **brazo** (hombro → codo, donde están los bujes amarillos) y
+  **antebrazo** (codo → lápiz). Los dos antebrazos se unen en el portalápiz.
+- El programa calcula los ángulos de los dos hombros para cada punto (cinemática inversa) y
+  mueve el lápiz en línea recta a velocidad constante.
+- El motor mediano sube y baja el lápiz. Los sensores de toque dan el punto de partida (home).
+
+## Conexiones (de las instrucciones)
+
+| Puerto | Pieza |
+|---|---|
+| C | Motor grande izquierdo |
+| A | Motor grande derecho |
+| B | Motor mediano (lápiz) |
+| 2 | Sensor de toque izquierdo |
+| 3 | Sensor de toque derecho |
 
 ## 1. Cargar el programa (code.pybricks.com)
 
 1. Abre code.pybricks.com en Chrome o Edge y conecta el EV3.
 2. Crea un archivo llamado exactamente `dibujo.py` y pega el dibujo.
 3. Crea `print3rbot.py` y pega el programa.
-4. Con `print3rbot.py` abierto, aprieta **Run**. `dibujo.py` se envía solo porque el
-   programa lo importa.
-5. En el EV3, aprieta el botón central para empezar.
+4. Con `print3rbot.py` abierto, aprieta **Run**. `dibujo.py` se envía solo.
 
-Con Pybricks v2.0 (microSD + VS Code) también funciona: pega el programa en `main.py` y pon
-`dibujo.py` en la misma carpeta.
+## 2. Medir el robot (una vez)
 
-## 2. Conexiones (por defecto)
+Con una regla, de **centro de eje a centro de eje** (en una viga hay 8 mm entre agujeros):
 
-| Puerto | Pieza |
-|---|---|
-| A | Motor grande: carro, eje X |
-| B | Motor grande: avance, eje Y |
-| C | Motor mediano: lápiz arriba/abajo |
-| 1 | Sensor de toque: fin de carrera X (home) |
-| 2 | (opcional) segundo sensor de toque: fin de carrera Y → pon `PORT_TOUCH_Y = Port.S2` |
+| Variable | Qué medir | Valor inicial |
+|---|---|---|
+| `D` | Entre los dos ejes verticales de los engranajes de 40 dientes | 40 |
+| `L1` | Eje del hombro → eje del codo (bujes amarillos) | 80 |
+| `L2` | Eje del codo → centro del lápiz | 100 |
 
-Si tu montaje usa otros puertos, cámbialos al inicio de `print3rbot.py`.
+Los valores iniciales son estimaciones hechas a partir de los dibujos de las instrucciones.
+Pon tus medidas reales.
 
-## 3. Calibrar (una sola vez)
+## 3. Calibrar
 
-1. Pon `CALIBRAR = True` y ejecuta. El robot dibuja un cuadrado de 50 mm.
-2. **Si un eje va al revés**, cambia `DIR_X`/`DIR_Y` a `Direction.COUNTERCLOCKWISE`.
-   Si el home se aleja del sensor en vez de acercarse, también es eso.
-3. Mide los lados del cuadrado y corrige:
-   `DEG_PER_MM_X = DEG_PER_MM_X_actual * 50 / lado_medido_X` (igual para Y).
-4. Lápiz: ajusta `PEN_HOME_DIR` (hacia dónde sube) y `PEN_DOWN_ANGLE` (cuánto baja hasta
-   tocar el papel). Si tu mecanismo no tiene tope, pon `PEN_HOME_STALL = False` y deja el
-   lápiz arriba antes de empezar.
-5. Pon `MAX_X_MM`/`MAX_Y_MM` según el recorrido real. Luego `CALIBRAR = False`.
+Cada vez que corre, el programa primero pide **ajustar el lápiz**: con los botones
+Arriba/Abajo del EV3 mueve el motor mediano hasta que el lápiz toque el papel y aprieta Centro.
+(Si "Arriba" baja el lápiz, cambia el signo de `PEN_UP_ANGLE`. Si sube poco, aumenta su valor.)
+
+**Paso A: `CALIBRAR = 1` (home y brazos al frente)**
+
+1. Los brazos giran hasta tocar los sensores. Si un brazo se aleja de su sensor o el
+   programa dice "Home falló", cambia su `HOME_DIR_LEFT` o `HOME_DIR_RIGHT` (1 ↔ -1).
+2. Luego los dos brazos (tramo hombro → codo) deben quedar **apuntando al frente,
+   paralelos**.
+   - Si un brazo gira para el lado contrario al esperado, cambia su `DIR_LEFT` o `DIR_RIGHT`.
+   - Si queda girado unos grados **hacia la izquierda**, **suma** esos grados a su
+     `HOME_ANGLE_*`. Si queda **hacia la derecha**, **réstalos**.
+   - Repite hasta que queden bien.
+
+**Paso B: `CALIBRAR = 2` (rectángulo de prueba)**
+
+Dibuja el borde del área (`AREA_W` × `AREA_H`, 60 × 45 mm) con una cruz al centro.
+Si sale más grande o más chico, o deformado, revisa `D`, `L1` y `L2`. Si dice "fuera de
+alcance", achica el área o cambia `AREA_CY` (distancia del área a los hombros).
+
+**Paso C: `CALIBRAR = 0`** → dibuja `dibujo.py`.
 
 ## 4. Dibujar
 
-1. Abre `convertidor.html`, sube la imagen, elige ancho en mm y modo:
-   - **Contorno**: dibuja los bordes de las zonas negras (ideal para siluetas y logos).
-   - **Relleno**: rellena las zonas negras con rayado.
+1. En el convertidor, sube la imagen y elige el modo:
+   - **Contorno**: los bordes de las zonas negras (siluetas y logos).
+   - **Relleno**: rayado dentro de las zonas negras.
    - **Ambos**: borde + relleno.
-2. Copia el resultado en `dibujo.py`.
-3. Ejecuta `print3rbot.py`, pulsa el botón central para empezar. Pulsa el centro durante
-   el dibujo para pausar (entre trazos).
+2. Copia o guarda el resultado como `dibujo.py`.
+3. Corre `print3rbot.py`. El dibujo se escala solo para llenar el área (`AJUSTAR = True`).
+4. Durante el dibujo, el botón central pausa entre trazos.
 
-Consejos: imágenes de alto contraste (negro sobre blanco) funcionan mejor. Si las líneas
-salen curvas o temblorosas, baja `SPEED_DRAW`. Si hay holgura en los engranajes, se nota
-al cambiar de dirección: aprieta el montaje o dibuja más lento.
+Consejos: imágenes de alto contraste funcionan mejor. Si las líneas tiemblan, baja
+`SPEED_DRAW`. El portalápiz está en thingiverse.com/thing:409421 (indicado en las
+instrucciones).

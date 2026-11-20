@@ -189,7 +189,7 @@ textarea#out {
 
   <section class="code">
     <div class="code-head">
-      <p>Guarda esto como <code>dibujo.py</code> junto a <code>print3rbot.py</code> en tu proyecto de Pybricks. El origen (0, 0) es el home del robot; la cuadrícula marca 10 mm.</p>
+      <p>Guarda esto como <code>dibujo.py</code> junto a <code>print3rbot.py</code> en tu proyecto de Pybricks. El robot escala y centra el dibujo dentro de su área de dibujo; la cuadrícula marca 10 mm.</p>
       <div class="btns"><button class="primary" id="copy" type="button">Copiar dibujo.py</button></div>
     </div>
     <div class="toast" id="toast" role="status"></div>
@@ -489,8 +489,8 @@ textarea#out {
       if (out.length === 1) out.push(out[0]);
       return '    [' + out.join(',') + '],';
     });
-    // estimación con los valores por defecto de print3rbot.py: 12 °/mm, 250 °/s dibujando, 600 °/s viajando
-    const secs = draw / (250 / 12) + travel / (600 / 12) + strokes.length * 0.9;
+    // estimación con los valores por defecto de print3rbot.py: 12 mm/s dibujando, 25 mm/s viajando
+    const secs = draw / 12 + travel / 25 + strokes.length * 0.6;
     const t = secs < 60 ? Math.round(secs) + ' s' : Math.floor(secs / 60) + ' min ' + Math.round(secs % 60) + ' s';
     const heavy = pts > 20000;
     $('stats').innerHTML =
@@ -502,7 +502,7 @@ textarea#out {
     $('out').value =
 `# dibujo.py - generado por el Convertidor Print3rbot
 # ${strokes.length} trazos, ${pts} puntos, ~${t}
-# Unidades: mm. (0, 0) = home del robot.
+# Unidades: mm. (0, 0) = esquina superior izquierda de la imagen.
 
 WIDTH = ${fmt(wmm)}
 HEIGHT = ${fmt(hmm)}
